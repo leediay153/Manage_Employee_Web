@@ -16,20 +16,25 @@ function login($email, $password) {
 
     $password = md5($password);
 
-    
-    $staffQuery = mysqli_query($conn, "SELECT * FROM tblemployees WHERE email_id='$email' AND password='$password'");
+    $stmt = mysqli_prepare($conn,
+        "SELECT * FROM tblemployees WHERE email_id = ? AND password = ?"
+    );
+    mysqli_stmt_bind_param($stmt, "ss", $email, $password);
+    mysqli_stmt_execute($stmt);
+
+    $staffQuery = mysqli_stmt_get_result($stmt);
+
     if (!$staffQuery) {
         error_log("MySQL error: " . mysqli_error($conn));
-        return array('status' => 'error', 'message' => "Error: " . mysqli_error($conn));
-    } else {
-        $staffCount = mysqli_num_rows($staffQuery);
-        if ($staffCount > 0) {
-            $recordsRow = mysqli_fetch_assoc($staffQuery);
-            return checkAndSetSession($recordsRow);
-        } else {
-            return array('status' => 'error', 'message' => 'Sai thông tin tài khoản hoặc mật khẩu');
-        }
+        return array('status' => 'error', 'message' => 'Database error');
     }
+
+    if (mysqli_num_rows($staffQuery) > 0) {
+        $recordsRow = mysqli_fetch_assoc($staffQuery);
+        return checkAndSetSession($recordsRow);
+    }
+
+    return array('status' => 'error', 'message' => 'Sai thông tin tài khoản hoặc mật khẩu');
 }
 
 function checkAndSetSession($userRecord) {
